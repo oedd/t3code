@@ -12,6 +12,7 @@ import { PROVIDER_SEND_TURN_MAX_IMAGE_BYTES, type PreviewAnnotationRect } from "
 import { useComposerDraftStore, type ComposerThreadTarget } from "~/composerDraftStore";
 import { Button } from "~/components/ui/button";
 import { Popover, PopoverPopup } from "~/components/ui/popover";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { dataUrlToFile } from "~/lib/imageCompression";
 import { cn } from "~/lib/utils";
 import { FileSurfaceAction, FileSurfaceLoading } from "./fileSurfaceChrome";
@@ -26,7 +27,7 @@ import {
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface PdfDocumentPreviewProps {
-  src: string;
+  data: Uint8Array<ArrayBuffer>;
   title: string;
   source: string;
   composerDraftTarget?: ComposerThreadTarget | undefined;
@@ -82,14 +83,13 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
     let disposed = false;
     const assets = `${import.meta.env.BASE_URL}pdf-assets/`;
     const task = getDocument({
-      url: props.src,
+      // PDF.js transfers this buffer to its worker. Keep the snapshot's own bytes
+      // intact for version comparisons and render every page from this one copy.
+      data: props.data.slice(),
       cMapUrl: `${assets}cmaps/`,
       cMapPacked: true,
       standardFontDataUrl: `${assets}standard_fonts/`,
       wasmUrl: `${assets}wasm/`,
-      // Render only the requested page; don't eagerly stream the entire document.
-      disableAutoFetch: true,
-      disableStream: true,
     });
     task.onPassword = (submit: (password: string) => void, reason: number) => {
       if (!disposed)
@@ -110,7 +110,7 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
       disposed = true;
       void task.destroy();
     };
-  }, [props.src]);
+  }, [props.data]);
 
   useEffect(() => {
     const panel = scrollRef.current;
@@ -552,18 +552,30 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
               return (
                 <div
                   key={note.id}
-                  className="flex w-64 shrink-0 gap-2 rounded border border-border p-2"
+                  className="flex w-64 shrink-0 gap-2 overflow-hidden rounded border border-border p-2"
                 >
                   {image ? (
                     <img
                       src={image.previewUrl}
                       alt={note.pageTitle ?? "PDF region"}
-                      className="h-16 w-16 bg-white object-contain"
+                      className="h-16 w-16 shrink-0 bg-white object-contain"
                     />
                   ) : null}
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium">{note.pageTitle}</p>
-                    <p className="max-h-20 overflow-y-auto whitespace-pre-wrap text-xs" dir="auto">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={<p className="line-clamp-2 wrap-anywhere text-xs font-medium" />}
+                      >
+                        {note.pageTitle}
+                      </TooltipTrigger>
+                      <TooltipPopup>
+                        <div className="max-w-sm wrap-anywhere">{note.pageTitle}</div>
+                      </TooltipPopup>
+                    </Tooltip>
+                    <p
+                      className="max-h-20 overflow-y-auto whitespace-pre-wrap wrap-anywhere text-xs"
+                      dir="auto"
+                    >
                       {note.comment}
                     </p>
                   </div>

@@ -215,6 +215,21 @@ function WorkspaceBrowserPreview(props: {
       ? ""
       : `${assetUrl._tag === "Success" && assetUrl.url.includes("?") ? "&" : "?"}workspace-revision=${encodeURIComponent(props.workspaceMutationId)}`;
 
+  const refreshAssetUrl = useAssetUrlRefresh(props.environmentId, resource);
+  if (isPdfPreviewFile(props.absolutePath)) {
+    return (
+      <BrowserDocumentFrame
+        src={assetUrl._tag === "Success" ? `${assetUrl.url}${revisionSuffix}` : null}
+        title={props.title}
+        pdf
+        source={props.absolutePath}
+        watch
+        refreshSrc={refreshAssetUrl}
+        composerDraftTarget={props.composerDraftTarget}
+      />
+    );
+  }
+
   if (assetUrl._tag === "Failure") {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-destructive">
@@ -1244,7 +1259,7 @@ export default function FilePreviewPanel({
             />
           ) : relativePath && renderBrowserFile && absolutePath ? (
             <WorkspaceBrowserPreview
-              key={absolutePath}
+              key={`${environmentId}:${threadRef.threadId}:${absolutePath}`}
               environmentId={environmentId}
               threadRef={threadRef}
               absolutePath={absolutePath}
