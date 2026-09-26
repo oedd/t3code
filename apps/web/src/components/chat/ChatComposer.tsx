@@ -6636,6 +6636,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                         sizeBytes={previewFile.sizeBytes}
                         file={previewFile.file}
                         origin="Draft"
+                        composerDraftTarget={composerDraftTarget}
+                        annotationSource={`attachment:${previewFile.id}`}
                         {...(previewFile.uploadedAttachmentId && previewFile.uploadEnvironmentId
                           ? {
                               asset: {

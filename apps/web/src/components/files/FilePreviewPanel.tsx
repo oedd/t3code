@@ -187,6 +187,7 @@ function WorkspaceBrowserPreview(props: {
   readonly workspaceRoot: string;
   readonly title: string;
   readonly workspaceMutationId: string | null;
+  readonly composerDraftTarget: ScopedThreadRef | DraftId;
 }) {
   const insideWorkspace =
     mediaFileReference(props.absolutePath, props.workspaceRoot).relativePath !== undefined;
@@ -223,6 +224,8 @@ function WorkspaceBrowserPreview(props: {
       src={`${assetUrl.url}${revisionSuffix}`}
       title={props.title}
       pdf={isPdfPreviewFile(props.absolutePath)}
+      source={props.absolutePath}
+      composerDraftTarget={props.composerDraftTarget}
     />
   );
 }
@@ -1179,6 +1182,7 @@ export default function FilePreviewPanel({
               mimeType={attachment.mimeType}
               sizeBytes={attachment.sizeBytes}
               asset={{ environmentId, attachmentId: attachment.id }}
+              composerDraftTarget={composerDraftTarget}
             />
           ) : relativePath && isVideo && absolutePath ? (
             <WorkspaceVideoPreview
@@ -1218,6 +1222,7 @@ export default function FilePreviewPanel({
               workspaceRoot={cwd}
               title={relativePath}
               workspaceMutationId={workspaceMutationId}
+              composerDraftTarget={composerDraftTarget}
             />
           ) : relativePath && file.error && file.data === null ? (
             <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-destructive">

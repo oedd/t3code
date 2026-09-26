@@ -24,6 +24,7 @@ import { toastManager } from "~/components/ui/toast";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useClientSettings, useUpdateClientSettings } from "~/hooks/useSettings";
 import { cn } from "~/lib/utils";
+import type { ComposerThreadTarget } from "~/composerDraftStore";
 
 import { AudioPreview } from "./AudioPreview";
 import { BrowserDocumentFrame } from "./BrowserDocumentFrame";
@@ -71,6 +72,8 @@ export function AttachmentFilePreview(props: {
   origin?: string;
   onRemove?: () => void;
   onClose?: () => void;
+  composerDraftTarget?: ComposerThreadTarget;
+  annotationSource?: string;
 }) {
   const kind = filePreviewKind(props);
   const delimiter = filePreviewDelimiter(props);
@@ -251,7 +254,13 @@ export function AttachmentFilePreview(props: {
       <ReadOnlySourcePreview name={props.name} text={content.text} />
     )
   ) : kind === "pdf" || kind === "html" ? (
-    <BrowserDocumentFrame src={url} title={props.name} pdf={kind === "pdf"} />
+    <BrowserDocumentFrame
+      src={url}
+      title={props.name}
+      pdf={kind === "pdf"}
+      source={props.annotationSource ?? (attachmentId ? `attachment:${attachmentId}` : props.name)}
+      composerDraftTarget={props.composerDraftTarget}
+    />
   ) : kind === "audio" ? (
     <AudioPreview src={url} name={props.name} onError={() => setError("Unable to load audio.")} />
   ) : kind === "video" ? (

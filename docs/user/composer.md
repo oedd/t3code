@@ -29,6 +29,19 @@ also send files to T3 Code through another app's system share sheet.
 
 See [images and videos](#images-and-videos-in-messages) for previewing and saving media.
 
+### Comment on a PDF
+
+On web and desktop, open a PDF from Files, a chat file link, or an attachment
+preview. Select an area of a page, write a comment, and add it to the prompt.
+Repeat on other pages or documents, then send the collected notes together.
+Each note includes a screenshot, document name, and page number. You can remove
+a note before sending; each screenshot counts toward the eight-attachment limit.
+
+The PDF reader supports page navigation, zoom, and whole-page captures. Notes
+belong to your prompt and do not modify the PDF. This reader does not yet provide
+text search, text selection, or continuous scrolling. PDFs opened explicitly in
+the integrated browser still use that browser's viewer.
+
 ## Send while the agent is working
 
 On web and desktop, a message sent during a running turn waits at the end of the conversation as a
