@@ -496,10 +496,8 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
             sideOffset={8}
             initialFocus={commentRef}
             aria-label={`Annotate PDF page ${capture.page}`}
-            className="w-[min(360px,calc(100vw-32px))] rounded-xl"
-            viewportClassName="p-2 [--viewport-inline-padding:--spacing(2)]"
           >
-            <div className="flex items-start gap-2">
+            <div className="flex w-80 max-w-[calc(100vw-64px)] items-start gap-2">
               <textarea
                 ref={commentRef}
                 dir="auto"
