@@ -12,7 +12,7 @@ import { PROVIDER_SEND_TURN_MAX_IMAGE_BYTES, type PreviewAnnotationRect } from "
 import { useComposerDraftStore, type ComposerThreadTarget } from "~/composerDraftStore";
 import { Button } from "~/components/ui/button";
 import { Popover, PopoverPopup } from "~/components/ui/popover";
-import { capturePreviewAnnotationScreenshot } from "~/lib/previewAnnotation";
+import { dataUrlToFile } from "~/lib/imageCompression";
 import { cn } from "~/lib/utils";
 import { FileSurfaceAction, FileSurfaceLoading } from "./fileSurfaceChrome";
 import {
@@ -236,7 +236,7 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
     if (capture) commentRef.current?.focus();
   }, [capture]);
 
-  async function addToPrompt() {
+  function addToPrompt() {
     const target = props.composerDraftTarget;
     if (!target || !capture || !comment.trim() || saving) return;
     setSaving(true);
@@ -248,10 +248,13 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
         title: props.title,
         comment,
       });
-      const result = await capturePreviewAnnotationScreenshot(annotation);
-      if (result.status !== "captured")
-        throw new Error("Could not attach the screenshot. Please try again.");
-      if (result.file.size > PROVIDER_SEND_TURN_MAX_IMAGE_BYTES)
+      // Decode locally: the desktop CSP intentionally disallows fetching data: URLs.
+      const file = dataUrlToFile(
+        capture.dataUrl,
+        `PDF-page-${capture.page}-${annotation.id}.png`,
+        "image/png",
+      );
+      if (file.size > PROVIDER_SEND_TURN_MAX_IMAGE_BYTES)
         throw new Error(
           "This screenshot is over 10 MB. Select a smaller area or zoom out and try again.",
         );
@@ -259,10 +262,10 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
       const accepted = store.addImage(target, {
         type: "image",
         id: annotation.id,
-        name: `PDF-page-${capture.page}-${annotation.id}.png`,
+        name: file.name,
         mimeType: "image/png",
-        sizeBytes: result.file.size,
-        file: result.file,
+        sizeBytes: file.size,
+        file,
         previewUrl: capture.dataUrl,
       });
       if (!accepted)
