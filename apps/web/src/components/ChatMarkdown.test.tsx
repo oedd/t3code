@@ -817,13 +817,27 @@ describe("shouldUseMarkdownFileBrowserPrimaryAction", () => {
     ).toBe(false);
   });
 
-  it("continues to open PDF files in the browser by default", () => {
+  it.each(["/tmp/report.pdf", "C:/papers/report.PDF", "report.pdf?download=1#page=2"])(
+    "opens %s in the file sidebar when available",
+    (iconPath) => {
+      expect(
+        shouldUseMarkdownFileBrowserPrimaryAction({
+          iconPath,
+          canOpenInEditor: true,
+          canOpenInBrowser: true,
+          canOpenInPanel: true,
+        }),
+      ).toBe(false);
+    },
+  );
+
+  it("retains the PDF browser fallback when no file sidebar is available", () => {
     expect(
       shouldUseMarkdownFileBrowserPrimaryAction({
         iconPath: "/tmp/report.pdf",
         canOpenInEditor: true,
         canOpenInBrowser: true,
-        canOpenInPanel: true,
+        canOpenInPanel: false,
       }),
     ).toBe(true);
   });

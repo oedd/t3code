@@ -268,9 +268,9 @@ export function shouldUseMarkdownFileBrowserPrimaryAction(input: {
   canOpenInPanel: boolean;
 }): boolean {
   return (
+    !input.canOpenInPanel &&
     input.canOpenInBrowser &&
-    (shouldOpenMarkdownFileLinkInBrowserByDefault(input.iconPath) ||
-      (!input.canOpenInEditor && !input.canOpenInPanel))
+    (shouldOpenMarkdownFileLinkInBrowserByDefault(input.iconPath) || !input.canOpenInEditor)
   );
 }
 
