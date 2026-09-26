@@ -9289,7 +9289,12 @@ export default function ChatView(props: ChatViewProps) {
               : null
           }
           {...(renderedRightPanelSurface.kind === "file" && renderedRightPanelSurface.attachment
-            ? { attachment: renderedRightPanelSurface.attachment }
+            ? {
+                attachment: renderedRightPanelSurface.attachment,
+                ...(renderedRightPanelSurface.draftAttachment
+                  ? { draftAttachment: renderedRightPanelSurface.draftAttachment }
+                  : {}),
+              }
             : {})}
           revealLine={
             renderedRightPanelSurface.kind === "file"

@@ -31,8 +31,10 @@ See [images and videos](#images-and-videos-in-messages) for previewing and savin
 
 ### Comment on a PDF
 
-On web and desktop, open a PDF from Files, a chat file link, or an attachment
-preview. Select an area of a page, write a comment, and add it to the prompt.
+On web and desktop, open a PDF from Files, a chat file link, or an attachment.
+It opens in the right sidebar beside your conversation. Select an area of a
+page and write in the annotation popup. Choose **Attach** (or press Enter) to
+add the screenshot and comment; the delete button or Escape discards it.
 Repeat on other pages or documents, then send the collected notes together.
 Each note includes a screenshot, document name, and page number. You can remove
 a note before sending; each screenshot counts toward the eight-attachment limit.

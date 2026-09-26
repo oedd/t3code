@@ -511,6 +511,33 @@ describe("rightPanelStore", () => {
     ).toEqual(["file:attachment:shared-id", "attachment:shared-id"]);
   });
 
+  it("keeps draft PDF tabs scoped and distinct from sent attachments across reopen and restore", () => {
+    const attachment = {
+      type: "file" as const,
+      id: "shared-id",
+      name: "paper.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 42,
+    };
+    const store = useRightPanelStore.getState();
+    const draftAttachment = { id: attachment.id, target: refA };
+    store.openAttachment(refA, attachment);
+    store.openAttachment(refA, attachment, draftAttachment);
+    store.openAttachment(refA, attachment, draftAttachment);
+    const restored = migratePersistedRightPanelState(
+      JSON.parse(JSON.stringify({ byThreadKey: useRightPanelStore.getState().byThreadKey })),
+    );
+    const panel = selectThreadRightPanelState(restored.byThreadKey, refA);
+    expect(panel.activeSurfaceId).toBe("draft-attachment:shared-id");
+    expect(panel.surfaces).toHaveLength(2);
+    expect(panel.surfaces[1]).toMatchObject({ draftAttachment });
+    expect(selectThreadRightPanelState(restored.byThreadKey, refB).surfaces).toEqual([]);
+    store.closeSurface(refA, "draft-attachment:shared-id");
+    expect(selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refA)?.id).toBe(
+      "attachment:shared-id",
+    );
+  });
+
   it("updates line reveal requests when reopening a file surface", () => {
     useRightPanelStore.getState().openFile(refA, "src/index.ts", 42);
     useRightPanelStore.getState().openFile(refA, "src/index.ts", 87);

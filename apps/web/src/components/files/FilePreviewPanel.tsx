@@ -50,7 +50,8 @@ import { previewEnvironment } from "~/state/preview";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { useAtomQueryRunner } from "~/state/use-atom-query-runner";
 
-import { AttachmentFilePreview } from "./AttachmentFilePreview";
+import { AttachmentFilePreview, DraftAttachmentFilePreview } from "./AttachmentFilePreview";
+import { type DraftAttachmentReference, useRightPanelStore } from "~/rightPanelStore";
 import { AudioPreview } from "./AudioPreview";
 import { BrowserDocumentFrame, isPdfPreviewFile } from "./BrowserDocumentFrame";
 import { DelimitedTablePreview } from "./DelimitedTablePreview";
@@ -97,6 +98,7 @@ interface FilePreviewPanelProps {
   projectName: string;
   relativePath: string | null;
   attachment?: ChatFileAttachment;
+  draftAttachment?: DraftAttachmentReference;
   threadRef: ScopedThreadRef;
   composerDraftTarget: ScopedThreadRef | DraftId;
   keybindings: ResolvedKeybindingsConfig;
@@ -191,13 +193,21 @@ function WorkspaceBrowserPreview(props: {
 }) {
   const insideWorkspace =
     mediaFileReference(props.absolutePath, props.workspaceRoot).relativePath !== undefined;
+  const isDraft = typeof props.composerDraftTarget === "string";
   const resource = useMemo(
-    () => ({
-      _tag: insideWorkspace ? ("workspace-file" as const) : ("media-file" as const),
-      threadId: props.threadRef.threadId,
-      path: props.absolutePath,
-    }),
-    [insideWorkspace, props.threadRef.threadId, props.absolutePath],
+    () =>
+      isDraft
+        ? {
+            _tag: "draft-workspace-file" as const,
+            cwd: props.workspaceRoot,
+            path: props.absolutePath,
+          }
+        : {
+            _tag: insideWorkspace ? ("workspace-file" as const) : ("media-file" as const),
+            threadId: props.threadRef.threadId,
+            path: props.absolutePath,
+          },
+    [isDraft, insideWorkspace, props.threadRef.threadId, props.workspaceRoot, props.absolutePath],
   );
   const assetUrl = useAssetUrlState(props.environmentId, resource);
   const revisionSuffix =
@@ -912,6 +922,7 @@ export default function FilePreviewPanel({
   projectName,
   relativePath,
   attachment,
+  draftAttachment,
   threadRef,
   composerDraftTarget,
   keybindings,
@@ -1175,7 +1186,17 @@ export default function FilePreviewPanel({
             relativePath ? "flex" : "hidden",
           )}
         >
-          {relativePath && attachment ? (
+          {relativePath && attachment && draftAttachment ? (
+            <DraftAttachmentFilePreview
+              reference={draftAttachment}
+              composerDraftTarget={composerDraftTarget}
+              onClose={() =>
+                useRightPanelStore
+                  .getState()
+                  .closeSurface(threadRef, `draft-attachment:${draftAttachment.id}`)
+              }
+            />
+          ) : relativePath && attachment ? (
             <AttachmentFilePreview
               key={`${environmentId}:${attachment.id}`}
               name={attachment.name}

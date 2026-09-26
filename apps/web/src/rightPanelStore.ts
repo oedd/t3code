@@ -18,6 +18,12 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { resolveStorage } from "./lib/storage";
+import type { ComposerThreadTarget } from "./composerDraftStore";
+
+export interface DraftAttachmentReference {
+  id: string;
+  target: ComposerThreadTarget;
+}
 
 const RIGHT_PANEL_KINDS = [
   "diff",
@@ -54,7 +60,7 @@ export type RightPanelSurface =
   | { id: "diff"; kind: "diff" }
   | { id: "files"; kind: "files" }
   | {
-      id: `file:${string}` | `attachment:${string}`;
+      id: `file:${string}` | `attachment:${string}` | `draft-attachment:${string}`;
       kind: "file";
       /** Workspace-relative, or absolute for a host file outside the workspace. */
       relativePath: string;
@@ -63,6 +69,8 @@ export type RightPanelSurface =
       /** Present when the file lives in the thread's attachment store rather
           than at a workspace or host path. */
       attachment?: ChatFileAttachment;
+      /** Resolve unsent bytes from the composer, never serialize a Blob or object URL here. */
+      draftAttachment?: DraftAttachmentReference;
     }
   | {
       /**
@@ -135,7 +143,11 @@ interface RightPanelStoreState {
   renameDevice: (ref: ScopedThreadRef, surfaceId: string, title: string) => void;
   openBrowser: (ref: ScopedThreadRef, tabId: string | null) => void;
   openFile: (ref: ScopedThreadRef, relativePath: string, line?: number) => void;
-  openAttachment: (ref: ScopedThreadRef, attachment: ChatFileAttachment) => void;
+  openAttachment: (
+    ref: ScopedThreadRef,
+    attachment: ChatFileAttachment,
+    draftAttachment?: DraftAttachmentReference,
+  ) => void;
   openPullRequest: (
     ref: ScopedThreadRef,
     target: {
@@ -213,13 +225,17 @@ const fileSurface = (
   revealRequestId,
 });
 
-const attachmentSurface = (attachment: ChatFileAttachment): RightPanelSurface => ({
-  id: `attachment:${attachment.id}`,
+const attachmentSurface = (
+  attachment: ChatFileAttachment,
+  draftAttachment?: DraftAttachmentReference,
+): RightPanelSurface => ({
+  id: draftAttachment ? `draft-attachment:${draftAttachment.id}` : `attachment:${attachment.id}`,
   kind: "file",
   relativePath: attachment.name,
   revealLine: null,
   revealRequestId: 0,
   attachment,
+  ...(draftAttachment ? { draftAttachment } : {}),
 });
 
 const terminalSurface = (terminalId: string): RightPanelSurface => ({
@@ -601,7 +617,7 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
             };
           }),
         ),
-      openAttachment: (ref, attachment) =>
+      openAttachment: (ref, attachment, draftAttachment) =>
         set((state) =>
           userAction(state, scopedThreadKey(ref), (current) => {
             const withoutStandaloneExplorer = current.surfaces.filter(
@@ -609,7 +625,7 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
             );
             return upsertSurface(
               { ...current, surfaces: withoutStandaloneExplorer },
-              attachmentSurface(attachment),
+              attachmentSurface(attachment, draftAttachment),
             );
           }),
         ),

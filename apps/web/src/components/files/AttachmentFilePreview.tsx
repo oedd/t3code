@@ -24,7 +24,12 @@ import { toastManager } from "~/components/ui/toast";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useClientSettings, useUpdateClientSettings } from "~/hooks/useSettings";
 import { cn } from "~/lib/utils";
-import type { ComposerThreadTarget } from "~/composerDraftStore";
+import {
+  type ComposerThreadTarget,
+  useComposerDraftStore,
+  useComposerThreadDraft,
+} from "~/composerDraftStore";
+import type { DraftAttachmentReference } from "~/rightPanelStore";
 
 import { AudioPreview } from "./AudioPreview";
 import { BrowserDocumentFrame } from "./BrowserDocumentFrame";
@@ -41,6 +46,45 @@ const SourcePreview = lazy(() => import("./ReadOnlySourcePreview"));
 
 /** Signed asset URLs live for an hour; treat anything older than this as worth re-minting. */
 const STALE_URL_MS = 5 * 60_000;
+
+export function DraftAttachmentFilePreview(props: {
+  reference: DraftAttachmentReference;
+  composerDraftTarget: ComposerThreadTarget;
+  onClose: () => void;
+}) {
+  const draft = useComposerThreadDraft(props.reference.target);
+  const file = draft.files.find((candidate) => candidate.id === props.reference.id);
+  if (!file) {
+    return (
+      <FileSurfaceNotice>
+        This file is no longer in the draft. Open sent files from the conversation.
+      </FileSurfaceNotice>
+    );
+  }
+  return (
+    <AttachmentFilePreview
+      name={file.name}
+      mimeType={file.mimeType}
+      sizeBytes={file.sizeBytes}
+      file={file.file}
+      origin="Draft"
+      composerDraftTarget={props.composerDraftTarget}
+      annotationSource={`attachment:${file.id}`}
+      {...(file.uploadedAttachmentId && file.uploadEnvironmentId
+        ? {
+            asset: {
+              environmentId: file.uploadEnvironmentId,
+              attachmentId: file.uploadedAttachmentId,
+            },
+          }
+        : {})}
+      onRemove={() => {
+        useComposerDraftStore.getState().removeFile(props.reference.target, file.id);
+        props.onClose();
+      }}
+    />
+  );
+}
 
 /** Highlighted read-only source, loaded on demand so message rendering never waits on the highlighter. */
 export function ReadOnlySourcePreview(props: { name: string; text: string }) {

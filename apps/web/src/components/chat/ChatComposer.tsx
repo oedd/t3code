@@ -2,6 +2,7 @@ import { DESKTOP_PASTE_AS_TEXT_EVENT } from "../../lib/desktopPasteAsText";
 import { runtimeModeConfig, runtimeModeOptions } from "./runtimeModeConfig";
 import { useRightPanelStore } from "~/rightPanelStore";
 import { AttachmentFilePreview } from "../files/AttachmentFilePreview";
+import { isPdfPreviewFile } from "../files/BrowserDocumentFrame";
 import { Dialog, DialogPopup, DialogTitle } from "../ui/dialog";
 import { filterComposerPullRequestMatches } from "@t3tools/shared/composerPullRequestMatches";
 import { importPastedComposerText, readPastedComposerContext } from "../composerInlineTokenPaste";
@@ -1601,13 +1602,36 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const openPrLink = useOpenPrLink(routeThreadRef);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
   const previewFile = composerFiles.find((file) => file.id === previewFileId);
+  const openComposerFile = useCallback(
+    (fileId: string) => {
+      const file = composerFiles.find((candidate) => candidate.id === fileId);
+      if (file && (file.mimeType === "application/pdf" || isPdfPreviewFile(file.name))) {
+        useRightPanelStore
+          .getState()
+          .openAttachment(
+            routeThreadRef,
+            {
+              type: "file",
+              id: file.id,
+              name: file.name,
+              mimeType: file.mimeType,
+              sizeBytes: file.sizeBytes,
+            },
+            { id: file.id, target: attachmentDraftTarget },
+          );
+        return;
+      }
+      setPreviewFileId(fileId);
+    },
+    [attachmentDraftTarget, composerFiles, routeThreadRef],
+  );
   const composerContextActions = useMemo(
     () => ({
       expandImage: (imageId: string) => {
         const preview = buildExpandedImagePreview(composerImages, imageId);
         if (preview) onExpandImage(preview);
       },
-      openFile: setPreviewFileId,
+      openFile: openComposerFile,
       openMention: (path: string) => useRightPanelStore.getState().openFile(routeThreadRef, path),
       expandVideo: (fileId: string) => {
         const file = composerFiles.find((candidate) => candidate.id === fileId);
@@ -1633,7 +1657,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         openPrLink(event, url);
       },
     }),
-    [composerFiles, composerImages, environmentId, onExpandImage, openPrLink, routeThreadRef],
+    [
+      composerFiles,
+      composerImages,
+      environmentId,
+      onExpandImage,
+      openComposerFile,
+      openPrLink,
+      routeThreadRef,
+    ],
   );
   const composerContextRecords = useMemo(
     () =>
@@ -6548,7 +6580,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                             type="button"
                             disabled={needsReattach}
                             className="min-w-0 flex-1 truncate text-left hover:underline focus-visible:outline-2"
-                            onClick={() => setPreviewFileId(file.id)}
+                            onClick={() => openComposerFile(file.id)}
                           >
                             {file.name}
                           </button>

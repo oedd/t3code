@@ -11,7 +11,7 @@ import { PROVIDER_SEND_TURN_MAX_IMAGE_BYTES, type PreviewAnnotationRect } from "
 
 import { useComposerDraftStore, type ComposerThreadTarget } from "~/composerDraftStore";
 import { Button } from "~/components/ui/button";
-import { Textarea } from "~/components/ui/textarea";
+import { Popover, PopoverPopup } from "~/components/ui/popover";
 import { capturePreviewAnnotationScreenshot } from "~/lib/previewAnnotation";
 import { cn } from "~/lib/utils";
 import { FileSurfaceAction, FileSurfaceLoading } from "./fileSurfaceChrome";
@@ -67,6 +67,7 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ start: PdfPoint; pointerId: number } | null>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
+  const selectionRef = useRef<HTMLDivElement>(null);
   const draft = useComposerDraftStore((state) =>
     props.composerDraftTarget ? state.getComposerDraft(props.composerDraftTarget) : null,
   );
@@ -401,7 +402,10 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
           {error}
         </p>
       ) : null}
-      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto bg-muted/40 p-4">
+      <div
+        ref={scrollRef}
+        className="relative min-h-0 flex-1 overflow-auto bg-muted/40 p-4 [scrollbar-gutter:stable]"
+      >
         {!ready && !error && !passwordRequest ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
             <FileSurfaceLoading />
@@ -459,6 +463,7 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
           />
           {selection ? (
             <div
+              ref={selectionRef}
               className="pointer-events-none absolute border-2 border-primary bg-primary/15"
               style={{
                 left: `${selection.x * 100}%`,
@@ -470,41 +475,66 @@ export default function PdfDocumentPreview(props: PdfDocumentPreviewProps) {
           ) : null}
         </div>
       </div>
-      {capture ? (
-        <div className="flex shrink-0 items-start gap-3 border-t border-border p-3">
-          <img
-            src={capture.dataUrl}
-            alt={`Selected region on PDF page ${capture.page}`}
-            className="max-h-24 w-24 rounded border border-border bg-white object-contain"
-          />
-          <div className="min-w-0 flex-1 space-y-2">
-            <Textarea
-              ref={commentRef}
-              dir="auto"
-              aria-label={`Comment on PDF page ${capture.page}`}
-              placeholder="What should the agent know about this area?"
-              value={comment}
-              disabled={saving}
-              onChange={(event) => setComment(event.target.value)}
-            />
-            <div className="flex items-center gap-2">
+      <Popover
+        open={capture !== null}
+        onOpenChange={(open, details) => {
+          // Releasing a marquee also dispatches a click on the canvas. It must
+          // not dismiss the editor that this same gesture just opened.
+          if (details.reason === "outside-press" && details.event.target === canvasRef.current)
+            return;
+          if (!open && !saving) cancelSelection();
+        }}
+      >
+        {capture ? (
+          <PopoverPopup
+            anchor={selectionRef}
+            side="bottom"
+            align="start"
+            sideOffset={8}
+            initialFocus={commentRef}
+            aria-label={`Annotate PDF page ${capture.page}`}
+            className="w-[min(360px,calc(100vw-32px))] rounded-xl"
+            viewportClassName="p-2 [--viewport-inline-padding:--spacing(2)]"
+          >
+            <div className="flex items-start gap-2">
+              <textarea
+                ref={commentRef}
+                dir="auto"
+                aria-label={`Comment on PDF page ${capture.page}`}
+                placeholder="Describe the change…"
+                rows={1}
+                className="field-sizing-content min-h-8 max-h-24 min-w-0 flex-1 resize-none border-0 border-b border-b-transparent bg-transparent px-0 py-1.5 text-sm leading-5 outline-none placeholder:text-muted-foreground focus:border-b-primary"
+                value={comment}
+                disabled={saving}
+                onChange={(event) => setComment(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    void addToPrompt();
+                  }
+                }}
+              />
+              <FileSurfaceAction
+                label="Delete annotation"
+                disabled={saving}
+                onPress={cancelSelection}
+              >
+                <Trash2 className="size-3.5" />
+              </FileSurfaceAction>
               <Button
                 size="compact"
+                title="Attach annotation and screenshot (Enter)"
                 disabled={!comment.trim() || saving}
                 onClick={() => {
                   void addToPrompt();
                 }}
               >
-                {saving ? "Adding…" : "Add to prompt"}
+                {saving ? "Attaching…" : "Attach"}
               </Button>
-              <Button size="compact" variant="ghost" disabled={saving} onClick={cancelSelection}>
-                Cancel
-              </Button>
-              <span className="text-xs text-muted-foreground">Page {capture.page}</span>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </PopoverPopup>
+        ) : null}
+      </Popover>
       {status ? (
         <p role="status" className="border-t border-border px-3 py-2 text-xs">
           {status}
